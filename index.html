@@ -1125,7 +1125,16 @@
     async function loadPricingData(currency = 'USD') {
       try {
         currentCurrency = currency;
-        const response = await fetch(`${API_BASE}/api/plans?currency=${currency}`);
+
+        // Use AbortController for timeout (3 seconds)
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+        const response = await fetch(`${API_BASE}/api/plans?currency=${currency}`, {
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
         const data = await response.json();
 
         if (data.error) {
@@ -1137,7 +1146,8 @@
         currentCurrencySymbol = data.currency_symbol || '$';
         renderPricingCards(data.plans);
         renderPerClientPricing(data.per_client_plans || []);
-        loadComparisonTable();
+        // Skip comparison table API call - use static display
+        loadComparisonTableFallback();
       } catch (error) {
         console.error('Failed to load pricing from API, using fallback:', error);
         // Use fallback pricing data
