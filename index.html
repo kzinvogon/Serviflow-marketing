@@ -1070,6 +1070,52 @@
     // API Base URL - Points to the main app for API calls
     const API_BASE = 'https://app.serviflow.app';
 
+    // Fallback pricing data when API is unavailable
+    const FALLBACK_PRICING = {
+      plans: [
+        {
+          slug: 'starter',
+          display_name: 'Starter',
+          tagline: 'For small teams getting started',
+          price_monthly: 29,
+          price_yearly: 290,
+          is_featured: false,
+          features: ['core.ticketing', 'sla.basic', 'core.knowledge_base', 'integrations.email.ingest']
+        },
+        {
+          slug: 'professional',
+          display_name: 'Professional',
+          tagline: 'Most popular for growing MSPs',
+          price_monthly: 49,
+          price_yearly: 490,
+          is_featured: true,
+          badge_text: 'Most Popular',
+          features: ['core.ticketing', 'sla.basic', 'core.knowledge_base', 'integrations.email.ingest', 'customer.portal', 'ai.triage', 'integrations.teams']
+        },
+        {
+          slug: 'enterprise',
+          display_name: 'Enterprise',
+          tagline: 'For large teams with advanced needs',
+          price_monthly: 99,
+          price_yearly: 990,
+          is_featured: false,
+          features: ['core.ticketing', 'sla.basic', 'core.knowledge_base', 'integrations.email.ingest', 'customer.portal', 'ai.triage', 'integrations.teams', 'sla.advanced', 'api.full']
+        }
+      ],
+      per_client_plans: [
+        {
+          slug: 'per-client',
+          display_name: 'Per-Client',
+          tagline: 'Perfect for MSPs who want unlimited technicians',
+          price_monthly: 89,
+          base_clients_included: 10,
+          price_additional_client: 5
+        }
+      ],
+      currency: 'USD',
+      currency_symbol: '$'
+    };
+
     // Dynamic Pricing - Fetch from /api/plans
     let plansData = null;
     let perClientPlansData = null;
@@ -1081,17 +1127,34 @@
         currentCurrency = currency;
         const response = await fetch(`${API_BASE}/api/plans?currency=${currency}`);
         const data = await response.json();
+
+        if (data.error) {
+          throw new Error(data.error);
+        }
+
         plansData = data.plans;
         perClientPlansData = data.per_client_plans || [];
-        currentCurrencySymbol = data.currency_symbol || 'A$';
+        currentCurrencySymbol = data.currency_symbol || '$';
         renderPricingCards(data.plans);
         renderPerClientPricing(data.per_client_plans || []);
         loadComparisonTable();
       } catch (error) {
-        console.error('Failed to load pricing:', error);
-        document.getElementById('pricing-loading').innerHTML = `
-          <p class="text-red-500">Failed to load pricing. Please refresh the page.</p>
-        `;
+        console.error('Failed to load pricing from API, using fallback:', error);
+        // Use fallback pricing data
+        plansData = FALLBACK_PRICING.plans;
+        perClientPlansData = FALLBACK_PRICING.per_client_plans;
+        currentCurrencySymbol = FALLBACK_PRICING.currency_symbol;
+        renderPricingCards(FALLBACK_PRICING.plans);
+        renderPerClientPricing(FALLBACK_PRICING.per_client_plans);
+        loadComparisonTableFallback();
+      }
+    }
+
+    function loadComparisonTableFallback() {
+      // Hide comparison table when using fallback (or show simplified version)
+      const container = document.getElementById('comparison-table');
+      if (container) {
+        container.innerHTML = '';
       }
     }
 
